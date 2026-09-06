@@ -28,7 +28,7 @@ Create a `.env` file in the project root (copy from `.env.example`):
 IBM_API_KEY=<your IBM Cloud API key>
 IBM_PROJECT_ID=b07bdd7c-5cb1-4036-ba24-d1dfe1cb6003
 IBM_ML_URL=https://us-south.ml.cloud.ibm.com
-PORT=3000
+PORT=3100
 ```
 
 ### 3. Start the server
@@ -38,7 +38,7 @@ npm start
 
 ### 4. Open in browser
 ```
-http://localhost:3000
+http://localhost:3100
 ```
 
 ---
