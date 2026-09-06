@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>✈️ AI Travel Agent — IBM Granite</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:-apple-system,"Segoe UI",system-ui,sans-serif;
+      background:#0b1120;
+      color:#e2e8f0;
+      height:100dvh;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+
+    /* ── HEADER ── */
+    header{
+      background:linear-gradient(120deg,#0f2444 0%,#1a1150 100%);
+      border-bottom:1px solid #1e3a8a55;
+      padding:12px 20px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-shrink:0;
+      box-shadow:0 2px 12px #0005;
+    }
+    .h-icon{font-size:26px}
+    .h-text{flex:1}
+    .h-text h1{font-size:17px;font-weight:700;color:#93c5fd;letter-spacing:.3px}
+    .h-text p{font-size:11px;color:#4b6388;margin-top:1px}
+    .badge{
+      background:linear-gradient(135deg,#1e40af,#4338ca);
+      color:#bfdbfe;font-size:11px;font-weight:700;
+      padding:4px 12px;border-radius:20px;letter-spacing:.5px;
+    }
+
+    /* ── DEST IMAGE STRIP ── */
+    #dest-strip{
+      display: flex;
+      /* justify-content: space-evenly; */
+      background:#0d1829;border-bottom:1px solid #1e293b;
+      height:90px;
+      width: 100%;
+      scrollbar-width:none;
+    }
+    #dest-strip::-webkit-scrollbar{display:none}
+    .dest-card{
+      display:flex;
+      flex-grow: 1;
+      ;width:130px;height:90px;position:relative;
+      
+      cursor:pointer;overflow:hidden;border-right:1px solid #1e293b;
+      transition:transform .2s;
+    }
+    .dest-card:hover{transform:scale(1.04);z-index:2}
+    .dest-card img{width:100%;height:100%;object-fit:cover;filter:brightness(.7)}
+    .dest-card .dest-label{
+      position:absolute;bottom:0;left:0;right:0;
+      background:linear-gradient(transparent,#000b);
+      color:#fff;font-size:11px;font-weight:600;
+      padding:6px 8px 4px;letter-spacing:.3px;
+    }
+    .dest-card .dest-flag{font-size:14px;margin-right:3px}
+
+    /* ── CHAT WINDOW ── */
+    #chat-window{
+      flex:1;overflow-y:auto;
+      padding:20px 16px 10px;
+      display:flex;flex-direction:column;gap:14px;
+      scroll-behavior:smooth;
+    }
+    #chat-window::-webkit-scrollbar{width:5px}
+    #chat-window::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:3px}
+
+    /* ── MESSAGES ── */
+    .msg{display:flex;gap:10px;max-width:860px;width:100%;animation:fadeUp .22s ease}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .msg.user{align-self:flex-end;flex-direction:row-reverse}
+    .msg.bot{align-self:flex-start}
+    .avatar{
+      width:32px;height:32px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:15px;flex-shrink:0;margin-top:2px;
+    }
+    .msg.user .avatar{background:#1d4ed8}
+    .msg.bot  .avatar{background:#0f2444;border:1px solid #1e3a8a55}
+
+    .bubble{
+      padding:12px 16px;border-radius:16px;
+      line-height:1.7;font-size:14px;
+      max-width:calc(100% - 48px);word-break:break-word;
+    }
+    .msg.user .bubble{
+      background:linear-gradient(135deg,#1d4ed8,#2563eb);
+      color:#eff6ff;border-bottom-right-radius:4px;
+    }
+    .msg.bot .bubble{
+      background:#111c2d;color:#cbd5e1;
+      border:1px solid #1e3a5f;border-bottom-left-radius:4px;
+    }
+
+    /* ── MARKDOWN INSIDE BOT BUBBLE ── */
+    .bubble h1,.bubble h2{
+      color:#38bdf8;font-size:16px;font-weight:700;
+      margin:14px 0 8px;padding-bottom:4px;
+      border-bottom:1px solid #1e3a5f;
+    }
+    .bubble h3{color:#7dd3fc;font-size:14px;font-weight:700;margin:12px 0 6px}
+    .bubble h1:first-child,.bubble h2:first-child,.bubble h3:first-child{margin-top:0}
+    .bubble p{margin:5px 0}
+    .bubble ul,.bubble ol{padding-left:18px;margin:5px 0}
+    .bubble li{margin:3px 0;color:#94a3b8}
+    .bubble strong{color:#e2e8f0}
+    .bubble em{color:#64748b;font-style:italic}
+    .bubble hr{border:none;border-top:1px solid #1e3a5f;margin:10px 0}
+    .bubble blockquote{
+      border-left:3px solid #1d4ed8;padding-left:10px;
+      color:#64748b;margin:8px 0;font-style:italic;font-size:13px;
+    }
+    .bubble code{
+      background:#0b1120;padding:1px 6px;border-radius:4px;
+      font-size:12px;font-family:"Cascadia Code","Fira Code",monospace;color:#7dd3fc;
+    }
+
+    /* ── MARKDOWN TABLE ── */
+    .bubble table{
+      border-collapse:collapse;width:100%;margin:10px 0 6px;font-size:13px;
+      border-radius:8px;overflow:hidden;border:1px solid #1e3a5f;
+    }
+    .bubble th{
+      background:#0f2444;color:#93c5fd;
+      padding:7px 12px;border:1px solid #1e3a5f;
+      text-align:left;font-weight:600;font-size:12px;
+    }
+    /* Hide thead entirely when all th cells are empty */
+    .bubble thead:has(th:empty:only-child),
+    .bubble thead:has(th:empty ~ th:empty){display:none}
+    .bubble td{
+      padding:8px 12px;border:1px solid #1e293b;
+      color:#cbd5e1;vertical-align:middle;
+    }
+    /* First column = label style */
+    .bubble td:first-child{
+      color:#7dd3fc;font-weight:600;font-size:12px;
+      background:#0d1e35;white-space:nowrap;width:30%;
+    }
+    /* Second column = value style — always fully visible */
+    .bubble td:last-child{
+      color:#e2e8f0;font-size:13.5px;font-weight:500;
+    }
+    .bubble tr:nth-child(even) td{background:#0b1829}
+    .bubble tr:nth-child(even) td:first-child{background:#091624}
+
+    /* ── TRANSPORT MODE CARDS ── */
+    .mode-card{
+      background:#0d1829;border:1px solid #1e3a5f;
+      border-radius:10px;padding:10px 14px;margin:8px 0;
+    }
+    .mode-card h4{color:#38bdf8;font-size:13px;font-weight:700;margin-bottom:6px}
+
+    /* ── RECOMMENDATION CARD ── */
+    .rec-card{
+      margin:16px 0 6px;
+      background:linear-gradient(135deg,#1a1a00 0%,#0f1e0a 100%);
+      border:1.5px solid #ca8a04;
+      border-radius:14px;
+      padding:16px 18px;
+      position:relative;
+      overflow:hidden;
+    }
+    .rec-card::before{
+      content:'';
+      position:absolute;top:0;left:0;right:0;height:3px;
+      background:linear-gradient(90deg,#fbbf24,#84cc16,#fbbf24);
+    }
+    .rec-card .rec-header{
+      display:flex;align-items:center;gap:10px;margin-bottom:10px;
+    }
+    .rec-card .rec-trophy{
+      font-size:26px;line-height:1;flex-shrink:0;
+    }
+    .rec-card .rec-title{
+      font-size:15px;font-weight:800;
+      color:#fde047;letter-spacing:.3px;
+      text-transform:uppercase;
+    }
+    .rec-card .rec-subtitle{
+      font-size:11px;color:#a3e635;margin-top:1px;letter-spacing:.4px;
+    }
+    .rec-card .rec-body{
+      font-size:13.5px;color:#d1fae5;line-height:1.75;
+    }
+    .rec-card .rec-body strong{color:#fde047}
+    .rec-card .rec-body em{color:#86efac;font-style:normal}
+    .rec-card .rec-tags{
+      display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;
+    }
+    .rec-card .rec-tag{
+      background:#15310a;border:1px solid #4ade80;
+      color:#86efac;font-size:11px;font-weight:600;
+      padding:3px 10px;border-radius:20px;letter-spacing:.3px;
+    }
+    .rec-card .rec-disclaimer{
+      margin-top:12px;padding-top:10px;
+      border-top:1px solid #ca8a0440;
+      font-size:11.5px;color:#78716c;font-style:italic;
+    }
+
+    /* ── MODE PICKER ── */
+    .mode-picker{
+      display:flex;gap:10px;flex-wrap:wrap;
+      margin-top:14px;padding-top:14px;
+      border-top:1px solid #1e3a5f;
+    }
+    .mode-picker-label{
+      width:100%;font-size:12px;font-weight:600;
+      color:#64748b;letter-spacing:.5px;text-transform:uppercase;
+      margin-bottom:4px;
+    }
+    .mode-btn{
+      display:flex;align-items:center;gap:8px;
+      background:#0d1829;border:1.5px solid #1e3a5f;
+      border-radius:12px;padding:10px 16px;
+      cursor:pointer;transition:all .18s;flex:1;min-width:120px;
+      color:#94a3b8;font-size:13px;font-weight:600;
+    }
+    .mode-btn:hover{
+      border-color:#3b82f6;background:#0f2444;color:#93c5fd;
+      transform:translateY(-2px);box-shadow:0 4px 16px #1d4ed822;
+    }
+    .mode-btn.selected{
+      border-color:#22c55e;background:#052e16;color:#86efac;
+      pointer-events:none;
+    }
+    .mode-btn .mode-icon{font-size:20px;line-height:1}
+    .mode-btn .mode-name{flex:1}
+    .mode-btn .mode-arrow{font-size:12px;opacity:.5}
+    .mode-btn.selected .mode-arrow{opacity:1}
+
+    /* ── TYPING INDICATOR ── */
+    #typing{
+      display:none;align-self:flex-start;
+      padding:10px 16px;background:#111c2d;
+      border:1px solid #1e3a5f;border-radius:16px;border-bottom-left-radius:4px;
+      gap:5px;align-items:center;
+    }
+    #typing.visible{display:flex}
+    .dot{
+      width:7px;height:7px;background:#3b82f6;
+      border-radius:50%;animation:bounce 1.2s infinite;
+    }
+    .dot:nth-child(2){animation-delay:.2s}
+    .dot:nth-child(3){animation-delay:.4s}
+    @keyframes bounce{
+      0%,80%,100%{transform:translateY(0);opacity:.5}
+      40%{transform:translateY(-6px);opacity:1}
+    }
+
+    /* ── INPUT BAR ── */
+    #input-bar{
+      background:#0b1120;border-top:1px solid #1e293b;
+      padding:10px 16px 14px;flex-shrink:0;
+    }
+    .chip-row{
+      max-width:860px;margin:0 auto 8px;
+      display:flex;gap:6px;flex-wrap:wrap;
+    }
+    .chip{
+      background:#111c2d;border:1px solid #1e3a5f;
+      color:#64748b;font-size:12px;padding:4px 12px;
+      border-radius:20px;cursor:pointer;transition:all .15s;white-space:nowrap;
+    }
+    .chip:hover{background:#0f2444;border-color:#3b82f6;color:#93c5fd}
+    .input-wrap{
+      max-width:860px;margin:0 auto;
+      display:flex;gap:8px;align-items:flex-end;
+      background:#111c2d;border:1px solid #1e3a5f;
+      border-radius:14px;padding:8px 8px 8px 14px;
+      transition:border-color .2s;
+    }
+    .input-wrap:focus-within{border-color:#3b82f6}
+    #user-input{
+      flex:1;background:transparent;border:none;outline:none;
+      resize:none;color:#e2e8f0;font-size:14px;font-family:inherit;
+      line-height:1.5;max-height:110px;min-height:24px;overflow-y:auto;
+    }
+    #user-input::placeholder{color:#334155}
+    #send-btn{
+      width:36px;height:36px;border-radius:10px;border:none;
+      background:linear-gradient(135deg,#1d4ed8,#4338ca);
+      color:#fff;cursor:pointer;display:flex;
+      align-items:center;justify-content:center;flex-shrink:0;
+      transition:opacity .2s,transform .1s;
+    }
+    #send-btn:hover{opacity:.85}
+    #send-btn:active{transform:scale(.92)}
+    #send-btn:disabled{background:#1e293b;cursor:not-allowed;opacity:.5}
+    #send-btn svg{width:17px;height:17px;fill:white}
+
+    /* ── WELCOME ── */
+    #welcome{
+      text-align:center;padding:30px 20px;
+      max-width:520px;margin:auto;
+    }
+    #welcome .big{font-size:52px;margin-bottom:12px}
+    #welcome h2{font-size:20px;color:#93c5fd;margin-bottom:8px;font-weight:700}
+    #welcome p{font-size:13px;color:#334155;line-height:1.7}
+
+    /* ── TOAST ── */
+    #toast{
+      position:fixed;bottom:88px;left:50%;transform:translateX(-50%);
+      background:#450a0a;color:#fca5a5;padding:10px 18px;
+      border-radius:10px;font-size:13px;display:none;z-index:99;
+      border:1px solid #7f1d1d;max-width:90vw;text-align:center;
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="h-icon">✈️</div>
+  <div class="h-text">
+    <h1>AI Travel Agent</h1>
+    <p>Compare flights · trains · buses · road trips — powered by IBM Granite</p>
+  </div>
+  <span class="badge">IBM Granite</span>
+</header>
+
+<!-- DESTINATION IMAGE STRIP -->
+<div id="dest-strip">
+  <div class="dest-card" onclick="askDest('Mumbai to Goa')">
+    <img src="https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=260&q=70" alt="Goa"/>
+    <div class="dest-label"><span class="dest-flag">🏖️</span>Goa</div>
+  </div>
+  <div class="dest-card" onclick="askDest('Delhi to Manali')">
+    <img src="https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=260&q=70" alt="Manali"/>
+    <div class="dest-label"><span class="dest-flag">🏔️</span>Manali</div>
+  </div>
+  <div class="dest-card" onclick="askDest('Bangalore to Ooty')">
+    <img src="https://images.unsplash.com/photo-1571401835393-8c5f35328320?w=260&q=70" alt="Ooty"/>
+    <div class="dest-label"><span class="dest-flag">🍃</span>Ooty</div>
+  </div>
+  <div class="dest-card" onclick="askDest('Delhi to Jaipur')">
+    <img src="https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=260&q=70" alt="Jaipur"/>
+    <div class="dest-label"><span class="dest-flag">🏰</span>Jaipur</div>
+  </div>
+  <div class="dest-card" onclick="askDest('Mumbai to Kerala')">
+    <img src="https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=260&q=70" alt="Kerala"/>
+    <div class="dest-label"><span class="dest-flag">🌴</span>Kerala</div>
+  </div>
+  <div class="dest-card" onclick="askDest('Delhi to Agra')">
+    <img src="https://images.unsplash.com/photo-1564507592333-c60657eea523?w=260&q=70" alt="Agra"/>
+    <div class="dest-label"><span class="dest-flag">🕌</span>Agra</div>
+  </div>
+  <div class="dest-card" onclick="askDest('Bangalore to Mysore')">
+    <img src="https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=260&q=70" alt="Mysore"/>
+    <div class="dest-label"><span class="dest-flag">🏯</span>Mysore</div>
+  </div>
+  <div class="dest-card" onclick="askDest('Mumbai to Pune')">
+    <img src="https://images.unsplash.com/photo-1562979314-bee7453e911c?w=260&q=70" alt="Pune"/>
+    <div class="dest-label"><span class="dest-flag">🌆</span>Pune</div>
+  </div>
+</div>
+
+<!-- CHAT WINDOW -->
+<div id="chat-window">
+  <div id="welcome">
+    <div class="big">🌍</div>
+    <h2>Where would you like to go?</h2>
+    <p>Click a destination above or type below. I'll compare flights, trains, buses &amp; road trips with costs, durations, pros/cons and a recommendation.</p>
+  </div>
+  <div id="typing">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+</div>
+
+<!-- INPUT BAR -->
+<div id="input-bar">
+  <div class="chip-row">
+    <div class="chip" onclick="useChip(this)">✈️ Plan a trip</div>
+    <div class="chip" onclick="useChip(this)">🚆 Train vs Flight</div>
+    <div class="chip" onclick="useChip(this)">💰 Budget travel</div>
+    <div class="chip" onclick="useChip(this)">🚗 Road trip</div>
+    <div class="chip" onclick="useChip(this)">🌏 International trip</div>
+  </div>
+  <div class="input-wrap">
+    <textarea id="user-input" rows="1"
+      placeholder="e.g. I want to travel from Mumbai to Goa for 2 people under ₹5000…"></textarea>
+    <button id="send-btn" onclick="sendMessage()" title="Send">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const history = [];
+  const chatEl  = document.getElementById('chat-window');
+  const inputEl = document.getElementById('user-input');
+  const sendEl  = document.getElementById('send-btn');
+  const typingEl= document.getElementById('typing');
+  const toastEl = document.getElementById('toast');
+
+  // ── Auto-grow textarea
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 110) + 'px';
+  });
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  function useChip(el) {
+    inputEl.value = el.textContent.replace(/^[\W]+/, '').trim();
+    sendMessage();
+  }
+
+  function askDest(text) {
+    inputEl.value = `I want to travel from ${text}. Can you show me all travel options?`;
+    sendMessage();
+  }
+
+  // ── Markdown → HTML (full table + formatting support)
+  function md(rawText) {
+    let text = rawText;
+
+    // ── Tables
+    text = text.replace(/\|(.+)\|\n\|[-| :]+\|\n((?:\|.+\|\n?)*)/g, (_, header, body) => {
+      const ths  = header.split('|').filter(c=>c.trim()).map(c=>`<th>${c.trim()}</th>`).join('');
+      const rows = body.trim().split('\n').map(row => {
+        const tds = row.split('|').filter(c=>c.trim()).map(c=>`<td>${c.trim()}</td>`).join('');
+        return `<tr>${tds}</tr>`;
+      }).join('');
+      return `<table><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table>`;
+    });
+
+    // ── Headings
+    text = text.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    text = text.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    text = text.replace(/^# (.+)$/gm,  '<h1>$1</h1>');
+
+    // ── Bold / italic
+    text = text.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    text = text.replace(/\*\*(.+?)\*\*/g,     '<strong>$1</strong>');
+    text = text.replace(/\*([^*\n]+?)\*/g,    '<em>$1</em>');
+
+    // ── Inline code
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // ── Blockquote — capture disclaimer before converting
+    const disclaimers = [];
+    text = text.replace(/^> (.+)$/gm, (_, content) => {
+      disclaimers.push(content);
+      return `%%DISCLAIMER_${disclaimers.length - 1}%%`;
+    });
+
+    // ── HR
+    text = text.replace(/^---+$/gm, '<hr>');
+
+    // ── Unordered lists
+    text = text.replace(/((?:^[-*•] .+$\n?)+)/gm, match => {
+      const items = match.trim().split('\n')
+        .map(l => `<li>${l.replace(/^[-*•] /, '')}</li>`).join('');
+      return `<ul>${items}</ul>`;
+    });
+
+    // ── Ordered lists
+    text = text.replace(/((?:^\d+\. .+$\n?)+)/gm, match => {
+      const items = match.trim().split('\n')
+        .map(l => `<li>${l.replace(/^\d+\. /, '')}</li>`).join('');
+      return `<ol>${items}</ol>`;
+    });
+
+    // ── Paragraphs
+    text = text.replace(/\n{2,}/g, '</p><p>');
+    text = text.replace(/\n/g, '<br>');
+    text = `<p>${text}</p>`;
+
+    // ── Restore blockquotes as plain disclaimer text (handled in rec-card below)
+    disclaimers.forEach((d, i) => {
+      text = text.replace(`%%DISCLAIMER_${i}%%`, `<span class="disclaimer-raw">${d}</span>`);
+    });
+
+    // ── UPGRADE: wrap the Recommendation h2 + everything after into a styled card
+    // Matches <h2>...Recommendation...</h2> and captures all following HTML until end
+    text = text.replace(
+      /(<h2>[^<]*(?:Recommendation|recommendation)[^<]*<\/h2>)([\s\S]*)/,
+      (_, heading, body) => {
+        // Extract disclaimer text if present
+        const disclaimerMatch = body.match(/<span class="disclaimer-raw">([^<]+)<\/span>/);
+        const disclaimer      = disclaimerMatch ? disclaimerMatch[1] : '';
+        // Remove the disclaimer span from body
+        const cleanBody = body.replace(/<span class="disclaimer-raw">[^<]+<\/span>/g, '').trim();
+
+        // Detect best option tag from body text for badge pills
+        const tags = [];
+        if (/flight|fly/i.test(cleanBody))     tags.push('✈️ Flight');
+        if (/train|rail/i.test(cleanBody))     tags.push('🚆 Train');
+        if (/bus/i.test(cleanBody))            tags.push('🚌 Bus');
+        if (/drive|car|cab/i.test(cleanBody))  tags.push('🚗 Self-Drive');
+        if (/budget/i.test(cleanBody))         tags.push('💰 Budget Pick');
+        if (/fast|quick|speed/i.test(cleanBody)) tags.push('⚡ Fastest');
+        if (/comfort/i.test(cleanBody))        tags.push('🛋️ Most Comfortable');
+
+        return `
+<div class="rec-card">
+  <div class="rec-header">
+    <div class="rec-trophy">🏆</div>
+    <div>
+      <div class="rec-title">AI Recommendation</div>
+      <div class="rec-subtitle">Best option for your journey</div>
+    </div>
+  </div>
+  <div class="rec-body">${cleanBody}</div>
+  ${tags.length ? `<div class="rec-tags">${tags.map(t=>`<span class="rec-tag">${t}</span>`).join('')}</div>` : ''}
+  ${disclaimer ? `<div class="rec-disclaimer">⚠️ ${disclaimer}</div>` : ''}
+</div>`;
+      }
+    );
+
+    return text;
+  }
+
+  // ── Detect if the bot reply contains a full comparison (all 4 modes present)
+  function isComparisonReply(text) {
+    const t = text.toLowerCase();
+    return (t.includes('flight') || t.includes('fly')) &&
+           (t.includes('train') || t.includes('rail')) &&
+           t.includes('bus') &&
+           (t.includes('self-drive') || t.includes('car') || t.includes('cab') || t.includes('drive'));
+  }
+
+  // ── Extract route from reply text e.g. "Mumbai → Goa" or "Mumbai to Goa"
+  function extractRoute(text) {
+    const m = text.match(/(?:from\s+)?([A-Z][a-zA-Z\s]+?)\s*(?:→|to)\s*([A-Z][a-zA-Z\s]+?)(?:\s|$|[,\.!])/);
+    return m ? `${m[1].trim()} to ${m[2].trim()}` : null;
+  }
+
+  // ── Inject mode picker buttons below the bot bubble
+  function injectModePicker(bubbleEl, route) {
+    const modes = [
+      { key: 'flight',    icon: '✈️', label: 'Flight'     },
+      { key: 'train',     icon: '🚆', label: 'Train'      },
+      { key: 'bus',       icon: '🚌', label: 'Bus'        },
+      { key: 'self-drive',icon: '🚗', label: 'Self-Drive' },
+    ];
+
+    const picker = document.createElement('div');
+    picker.className = 'mode-picker';
+    picker.innerHTML = `<div class="mode-picker-label">👇 Pick a mode for full details</div>`;
+
+    modes.forEach(({ key, icon, label }) => {
+      const btn = document.createElement('div');
+      btn.className = 'mode-btn';
+      btn.dataset.mode = key;
+      btn.innerHTML = `
+        <span class="mode-icon">${icon}</span>
+        <span class="mode-name">${label}</span>
+        <span class="mode-arrow">›</span>`;
+      btn.addEventListener('click', () => {
+        // Mark selected, disable all
+        picker.querySelectorAll('.mode-btn').forEach(b => {
+          b.classList.remove('selected');
+          b.style.pointerEvents = 'none';
+          b.style.opacity = b === btn ? '1' : '0.35';
+        });
+        btn.classList.add('selected');
+        btn.querySelector('.mode-arrow').textContent = '✓';
+        pickMode(label, icon, route);
+      });
+      picker.appendChild(btn);
+    });
+
+    bubbleEl.appendChild(picker);
+  }
+
+  function appendMsg(role, text) {
+    const w = document.getElementById('welcome');
+    if (w) w.remove();
+    if (role === 'user') {
+      const cr = document.querySelector('.chip-row');
+      if (cr) cr.style.display = 'none';
+    }
+
+    const wrap   = document.createElement('div');
+    wrap.className = `msg ${role}`;
+
+    const av = document.createElement('div');
+    av.className = 'avatar';
+    av.textContent = role === 'user' ? '🧑' : '🤖';
+
+    const bub = document.createElement('div');
+    bub.className = 'bubble';
+    bub.innerHTML = role === 'bot' ? md(text) : text.replace(/</g,'&lt;');
+
+    // If bot replied with a full comparison, inject the mode picker
+    if (role === 'bot' && isComparisonReply(text)) {
+      const route = extractRoute(text);
+      injectModePicker(bub, route);
+    }
+
+    wrap.appendChild(av);
+    wrap.appendChild(bub);
+    chatEl.insertBefore(wrap, typingEl);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  // ── User picked a mode — send a detail request
+  async function pickMode(label, icon, route) {
+    const routeText = route ? ` for the ${route} route` : '';
+    const userMsg = `I want to go by ${label}${routeText}. Please give me full details: top operators/services, booking tips, best class or seat type, what to carry, approximate schedule timings, and any insider tips.`;
+
+    appendMsg('user', userMsg);
+    history.push({ role: 'user', content: userMsg });
+    setTyping(true);
+    sendEl.disabled = true;
+
+    try {
+      const res  = await fetch('/api/chat', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ messages: history }),
+      });
+      const data = await res.json();
+      setTyping(false);
+
+      if (!res.ok || data.error) {
+        showToast(data.error || `Server error ${res.status}`);
+        history.pop();
+      } else {
+        const reply = data.reply || '(No response)';
+        appendMsg('bot', reply);
+        history.push({ role: 'assistant', content: reply });
+      }
+    } catch (err) {
+      setTyping(false);
+      showToast('Connection error — is the server running on port 3000?');
+      history.pop();
+    } finally {
+      sendEl.disabled = false;
+      inputEl.focus();
+    }
+  }
+
+  function setTyping(v) {
+    typingEl.classList.toggle('visible', v);
+    if (v) chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.style.display = 'block';
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.style.display = 'none', 5000);
+  }
+
+  async function sendMessage() {
+    const text = inputEl.value.trim();
+    if (!text || sendEl.disabled) return;
+
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    sendEl.disabled = true;
+
+    appendMsg('user', text);
+    history.push({ role: 'user', content: text });
+    setTyping(true);
+
+    try {
+      const res  = await fetch('/api/chat', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ messages: history }),
+      });
+      const data = await res.json();
+      setTyping(false);
+
+      if (!res.ok || data.error) {
+        showToast(data.error || `Server error ${res.status}`);
+        history.pop();
+      } else {
+        const reply = data.reply || '(No response)';
+        appendMsg('bot', reply);
+        history.push({ role: 'assistant', content: reply });
+      }
+    } catch (err) {
+      setTyping(false);
+      showToast('Connection error — is the server running on port 3000?');
+      history.pop();
+    } finally {
+      sendEl.disabled = false;
+      inputEl.focus();
+    }
+  }
+</script>
+</body>
+</html>
